@@ -34,7 +34,7 @@ jobs:
           curl --fail --silent --show-error \
             --user "${SONAR_TOKEN}:" \
             --request POST \
-            "${SONAR_HOST_URL}/api/autoscan/activation?project=${SONAR_PROJECT_KEY}&enable=false"
+            "${SONAR_HOST_URL}/api/autoscan/activation?projectKey=${SONAR_PROJECT_KEY}&enable=false"
 
       - name: Run SonarQube scan
         uses: SonarSource/sonarqube-scan-action@v6
@@ -50,4 +50,4 @@ jobs:
           curl --fail --silent --show-error \
             --user "${SONAR_TOKEN}:" \
             --request POST \
-            "${SONAR_HOST_URL}/api/autoscan/activation?project=${SONAR_PROJECT_KEY}&enable=true"
+            "${SONAR_HOST_URL}/api/autoscan/activation?projectKey=${SONAR_PROJECT_KEY}&enable=true"
