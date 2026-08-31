@@ -150,10 +150,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   # Block the release when dependencies carry unignored critical vulnerabilities.
-  # Runs the same `ods audit` gate used on PRs and nightly. Always runs (no skip
-  # condition) so the build jobs that depend on it aren't skipped on test runs;
-  # the audit itself degrades gracefully when the S3 allowlist or Dependabot API
-  # is unavailable.
+  # Always runs so build jobs that depend on it are not skipped on test runs.
   audit-gate:
     needs: [determine-builds]
     runs-on: ubuntu-latest
@@ -161,7 +158,6 @@ jobs:
     permissions:
       contents: read # checkout + read lockfiles
       id-token: write # OIDC for fetching the S3 allowlist
-      security-events: read # read Dependabot alerts
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v6
