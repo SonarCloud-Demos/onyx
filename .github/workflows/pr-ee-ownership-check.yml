@@ -40,13 +40,11 @@ jobs:
           # Note: anyone can run these agents, also on forks. A commit authored by
           # one of these logins passes without proof of who drove the agent.
           IGNORED_AUTHORS: |
-            dependabot[bot]
             onyx-cherry-pick[bot]
             claude[bot]
             cursoragent
             Copilot
             devin-ai-integration[bot]
-            greptile-apps[bot]
             cubic-dev-ai[bot]
           # Bot author emails that are not linked to any GitHub account (cubic, OmX).
           # These emails are easy to spoof, so commits with them pass only when the

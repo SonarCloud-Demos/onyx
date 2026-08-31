@@ -20,7 +20,6 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           IGNORED_AUTHORS: |
-            dependabot[bot]
             jmelahman
             onyx-cherry-pick[bot]
         run: |
