@@ -17,6 +17,9 @@ jobs:
   sonarqube:
     name: SonarQube Scan
     runs-on: ubuntu-latest
+    env:
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+      SONAR_PROJECT_KEY: SonarCloud-Demos_onyx
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,8 +27,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Disable automatic analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          curl --fail --silent --show-error \
+            --user "${SONAR_TOKEN}:" \
+            --request POST \
+            "${SONAR_HOST_URL}/api/autoscan/activation?project=${SONAR_PROJECT_KEY}&enable=false"
+
       - name: Run SonarQube scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+
+      - name: Re-enable automatic analysis
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          curl --fail --silent --show-error \
+            --user "${SONAR_TOKEN}:" \
+            --request POST \
+            "${SONAR_HOST_URL}/api/autoscan/activation?project=${SONAR_PROJECT_KEY}&enable=true"
