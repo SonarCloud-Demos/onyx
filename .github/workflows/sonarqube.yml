@@ -29,15 +29,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Disable automatic analysis
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          curl --fail --silent --show-error \
-            --user "${SONAR_TOKEN}:" \
-            --request POST \
-            "${SONAR_HOST_URL}/api/autoscan/activation?projectKey=${SONAR_PROJECT_KEY}&enable=false"
-
       - name: Run SonarQube scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
@@ -80,13 +71,3 @@ jobs:
 
           echo "Timed out waiting for SonarQube task ${ce_task_id}."
           exit 1
-
-      - name: Re-enable automatic analysis
-        if: always()
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          curl --fail --silent --show-error \
-            --user "${SONAR_TOKEN}:" \
-            --request POST \
-            "${SONAR_HOST_URL}/api/autoscan/activation?projectKey=${SONAR_PROJECT_KEY}&enable=true"
