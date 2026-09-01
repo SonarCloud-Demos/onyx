@@ -15,6 +15,7 @@ export interface SSOProviderResponse {
   allowed_email_domains: string[];
   config: Record<string, string | boolean | string[]>;
   redirect_uri: string;
+  authorize_url: string;
 }
 
 export interface SSOProviderCreateRequest {

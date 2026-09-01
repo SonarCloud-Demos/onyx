@@ -6,7 +6,11 @@ from pydantic import BaseModel
 
 from onyx.db.enums import SSOProviderType
 from onyx.db.models import SSOProvider
-from onyx.db.sso_provider import mask_secret_config_values, sso_login_callback_uri
+from onyx.db.sso_provider import (
+    mask_secret_config_values,
+    sso_authorize_path,
+    sso_login_callback_uri,
+)
 
 
 class SSOProviderCreateRequest(BaseModel):
@@ -59,6 +63,7 @@ class SSOProviderResponse(BaseModel):
     allowed_email_domains: list[str]
     config: dict[str, Any]
     redirect_uri: str
+    authorize_url: str
 
     @classmethod
     def from_model(cls, provider: SSOProvider, web_domain: str) -> SSOProviderResponse:
@@ -72,6 +77,7 @@ class SSOProviderResponse(BaseModel):
             else {}
         )
         redirect_uri = sso_login_callback_uri(provider, config, web_domain)
+        authorize_url = sso_authorize_path(provider)
 
         return cls(
             id=provider.id,
@@ -82,4 +88,5 @@ class SSOProviderResponse(BaseModel):
             allowed_email_domains=provider.allowed_email_domains,
             config=config,
             redirect_uri=redirect_uri,
+            authorize_url=authorize_url,
         )

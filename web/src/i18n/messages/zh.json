@@ -5689,6 +5689,20 @@
             "editDescription": "更新此提供商的用户登录方式。",
             "editTitle": "编辑 {name}"
           },
+          "loginField": {
+            "copyTooltip": "Copy login URL",
+            "description": "Use this URL to test SAML sign-in after the provider is saved and enabled.",
+            "openTooltip": "Open login URL",
+            "title": "Login URL"
+          },
+          "mockSaml": {
+            "applyDefaults": "Use Mock SAML defaults",
+            "certificateNote": "Paste the X.509 certificate from the metadata XML into the IdP certificate field below. It is not hardcoded so you can verify the live metadata first.",
+            "copyMetadataTooltip": "Copy metadata URL",
+            "description": "Mock SAML is a public test identity provider. Use these sample values to try SAML without changing your company IdP.",
+            "openMetadata": "Open metadata",
+            "title": "Mock SAML quick start"
+          },
           "nameField": {
             "description": "用于登录 URL 的唯一小写标识符。创建后无法更改。",
             "title": "名称"

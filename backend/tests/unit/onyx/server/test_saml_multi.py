@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
+from fastapi import Response
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from sqlalchemy.orm import Session
 
@@ -83,6 +84,35 @@ def test_domain_gate_denies_other_domain() -> None:
     provider = _provider(allowed_email_domains=["companya.com"])
     with pytest.raises(OnyxError):
         saml_multi._enforce_allowed_email_domain(provider, "user@companyb.com")
+
+
+def test_relay_state_redirect_accepts_internal_post_relay_state() -> None:
+    assert (
+        saml_multi._relay_state_redirect(
+            {"post_data": {"RelayState": "/app"}, "get_data": {}}
+        )
+        == "/app"
+    )
+
+
+def test_relay_state_redirect_rejects_external_relay_state() -> None:
+    assert (
+        saml_multi._relay_state_redirect(
+            {"post_data": {"RelayState": "https://evil.example"}, "get_data": {}}
+        )
+        == saml_multi.DEFAULT_SAML_LOGIN_REDIRECT
+    )
+
+
+def test_redirect_with_login_headers_carries_session_cookie() -> None:
+    login_response = Response(status_code=204)
+    login_response.set_cookie("fastapiusersauth", "session")
+
+    redirect = saml_multi._redirect_with_login_headers(login_response, "/app")
+
+    assert redirect.status_code == 302
+    assert redirect.headers["location"] == "/app"
+    assert "fastapiusersauth=session" in redirect.headers["set-cookie"]
 
 
 def test_resolve_by_name_fail_closed_unknown(monkeypatch: pytest.MonkeyPatch) -> None:

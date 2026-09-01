@@ -1,3 +1,5 @@
+import base64
+import re
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -108,6 +110,38 @@ def _reject_unfetchable_idp_url(config: dict[str, Any]) -> None:
         raise OnyxError(OnyxErrorCode.INVALID_INPUT, str(e)) from e
 
 
+_CERT_BODY_PATTERN = re.compile(
+    r"-----BEGIN CERTIFICATE-----(?P<body>.*?)-----END CERTIFICATE-----", re.DOTALL
+)
+
+
+def _reject_invalid_x509_cert(raw_cert: object, field: str) -> None:
+    if not isinstance(raw_cert, str) or not raw_cert.strip():
+        raise OnyxError(OnyxErrorCode.INVALID_INPUT, f"{field} is required.")
+
+    cert = raw_cert.strip()
+    match = _CERT_BODY_PATTERN.fullmatch(cert)
+    cert_body = match.group("body") if match else cert
+    compact_body = "".join(cert_body.split())
+    try:
+        base64.b64decode(compact_body, validate=True)
+    except Exception as e:
+        raise OnyxError(
+            OnyxErrorCode.INVALID_INPUT,
+            f"{field} must be a PEM certificate or base64 certificate body.",
+        ) from e
+
+
+def _reject_unsafe_saml_config(config: dict[str, Any]) -> None:
+    idp_sso_url = config.get("idp_sso_url")
+    if isinstance(idp_sso_url, str) and idp_sso_url:
+        try:
+            validate_idp_url(idp_sso_url, field="idp_sso_url")
+        except UnsafeSSOUrl as e:
+            raise OnyxError(OnyxErrorCode.INVALID_INPUT, str(e)) from e
+    _reject_invalid_x509_cert(config.get("idp_x509_cert"), "idp_x509_cert")
+
+
 admin_router = APIRouter(prefix="/admin/sso")
 
 
@@ -164,6 +198,8 @@ def create_sso_provider_endpoint(
 ) -> SSOProviderResponse:
     _reject_unsupported_provider_type(request.provider_type)
     _reject_unfetchable_idp_url(request.config)
+    if request.provider_type is SSOProviderType.SAML:
+        _reject_unsafe_saml_config(request.config)
     _validate_cloud_email_domains(request.allowed_email_domains)
     # New providers are created enabled, so an existing enabled provider
     # makes this a multi-SSO create.
@@ -218,6 +254,8 @@ def update_sso_provider_endpoint(
             }
             reject_masked_credentials(merged_config)
             _reject_unfetchable_idp_url(merged_config)
+            if provider.provider_type is SSOProviderType.SAML:
+                _reject_unsafe_saml_config(merged_config)
         updated_provider = update_sso_provider(
             db_session=db_session,
             provider_id=provider_id,
