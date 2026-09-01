@@ -44,6 +44,43 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
 
+      - name: Wait for SonarQube processing
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          task_file=".scannerwork/report-task.txt"
+          if [ ! -f "${task_file}" ]; then
+            echo "${task_file} was not created by the scanner."
+            exit 1
+          fi
+
+          ce_task_id="$(grep '^ceTaskId=' "${task_file}" | cut -d= -f2)"
+          if [ -z "${ce_task_id}" ]; then
+            echo "ceTaskId missing from ${task_file}."
+            exit 1
+          fi
+
+          for _ in $(seq 1 120); do
+            response="$(curl --fail --silent --show-error \
+              --user "${SONAR_TOKEN}:" \
+              "${SONAR_HOST_URL}/api/ce/task?id=${ce_task_id}")"
+            status="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["status"])' <<< "${response}")"
+            echo "SonarQube task ${ce_task_id}: ${status}"
+            case "${status}" in
+              SUCCESS)
+                exit 0
+                ;;
+              FAILED|CANCELED)
+                python3 -c 'import json, sys; print(json.load(sys.stdin)["task"].get("errorMessage", "SonarQube task failed"))' <<< "${response}"
+                exit 1
+                ;;
+            esac
+            sleep 5
+          done
+
+          echo "Timed out waiting for SonarQube task ${ce_task_id}."
+          exit 1
+
       - name: Re-enable automatic analysis
         if: always()
         env:
