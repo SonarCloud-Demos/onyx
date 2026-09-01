@@ -12,7 +12,7 @@ import {
   type TagItem,
   Text,
 } from "@opal/components";
-import { SvgSimpleLoader } from "@opal/icons";
+import { SvgExternalLink, SvgSimpleLoader } from "@opal/icons";
 import { InputErrorText, InputVertical, Section, toast } from "@opal/layouts";
 import type {
   SSOProviderCreateRequest,
@@ -27,6 +27,8 @@ import SSODomainVerification from "@/sections/modals/sso/SSODomainVerification";
 import {
   CONFIG_FIELDS_BY_TYPE,
   CREATABLE_SSO_PROVIDER_TYPES,
+  MOCK_SAML_DEFAULT_CONFIG,
+  MOCK_SAML_METADATA_URL,
   SSO_PROVIDER_DETAILS,
   type SSOConfigField,
 } from "@/lib/sso/utils";
@@ -173,6 +175,10 @@ function initialConfig(
   return initial;
 }
 
+function samlLoginUrl(providerName: string): string {
+  return `/api/auth/saml/${providerName || "mocksaml"}/authorize`;
+}
+
 interface TagListFieldProps {
   name: string;
   placeholder?: string;
@@ -253,10 +259,15 @@ export function SSOProviderModal({ provider, onSaved }: SSOProviderModalProps) {
   const validationSchema = useMemo(() => buildValidationSchema(t), [t]);
 
   const initialValues: SSOProviderFormValues = {
-    provider_type: provider?.provider_type ?? "GOOGLE_OAUTH",
-    name: provider?.name ?? "",
-    display_name: provider?.display_name ?? "",
-    config: initialConfig(provider?.config ?? {}),
+    provider_type: provider?.provider_type ?? "SAML",
+    name: provider?.name ?? "mocksaml",
+    display_name: provider?.display_name ?? "Mock SAML",
+    config: initialConfig(
+      provider?.config ?? {
+        ...MOCK_SAML_DEFAULT_CONFIG,
+        idp_x509_cert: "",
+      }
+    ),
     allowed_email_domains: provider?.allowed_email_domains ?? [],
   };
 
@@ -322,6 +333,19 @@ export function SSOProviderModal({ provider, onSaved }: SSOProviderModalProps) {
           }) => {
             const providerType = values.provider_type;
             const providerTypeIcon = SSO_PROVIDER_DETAILS[providerType].icon;
+            const loginUrl =
+              provider?.authorize_url ?? samlLoginUrl(values.name);
+
+            function applyMockSamlDefaults() {
+              void setFieldValue("provider_type", "SAML");
+              void setFieldValue("name", "mocksaml");
+              void setFieldValue("display_name", "Mock SAML");
+              for (const [key, value] of Object.entries(
+                MOCK_SAML_DEFAULT_CONFIG
+              )) {
+                void setFieldValue(`config.${key}`, value);
+              }
+            }
 
             return (
               // flex-col fills the fixed-height Content so Modal.Body scrolls
@@ -385,6 +409,62 @@ export function SSOProviderModal({ provider, onSaved }: SSOProviderModalProps) {
                       </InputSelect.Content>
                     </InputSelect>
                   </InputVertical>
+
+                  {providerType === "SAML" && (
+                    <Card border="solid" rounding={4}>
+                      <Section gap={3} padding={3} alignItems="stretch">
+                        <Text font="main-ui-action">
+                          {t("modals.provider.mockSaml.title")}
+                        </Text>
+                        <Text color="text-03">
+                          {t("modals.provider.mockSaml.description")}
+                        </Text>
+                        <Section
+                          flexDirection="row"
+                          alignItems="center"
+                          justifyContent="between"
+                          gap={2}
+                        >
+                          <Text font="main-ui-mono" color="text-04" as="span">
+                            {MOCK_SAML_METADATA_URL}
+                          </Text>
+                          <CopyButton
+                            getCopyText={() => MOCK_SAML_METADATA_URL}
+                            size="sm"
+                            tooltip={t(
+                              "modals.provider.mockSaml.copyMetadataTooltip"
+                            )}
+                          />
+                        </Section>
+                        <Text color="text-03">
+                          {t("modals.provider.mockSaml.certificateNote")}
+                        </Text>
+                        <Section flexDirection="row" gap={2} height="fit">
+                          <Button
+                            type="button"
+                            prominence="secondary"
+                            onClick={applyMockSamlDefaults}
+                          >
+                            {t("modals.provider.mockSaml.applyDefaults")}
+                          </Button>
+                          <Button
+                            type="button"
+                            prominence="tertiary"
+                            rightIcon={SvgExternalLink}
+                            onClick={() => {
+                              window.open(
+                                MOCK_SAML_METADATA_URL,
+                                "_blank",
+                                "noopener,noreferrer"
+                              );
+                            }}
+                          >
+                            {t("modals.provider.mockSaml.openMetadata")}
+                          </Button>
+                        </Section>
+                      </Section>
+                    </Card>
+                  )}
 
                   <InputVertical
                     title={t("modals.provider.nameField.title")}
@@ -491,6 +571,57 @@ export function SSOProviderModal({ provider, onSaved }: SSOProviderModalProps) {
                               { label: redirectLabel }
                             )}
                           />
+                        </Section>
+                      </Card>
+                    </InputVertical>
+                  )}
+
+                  {providerType === "SAML" && (
+                    <InputVertical
+                      title={t("modals.provider.loginField.title")}
+                      description={t("modals.provider.loginField.description")}
+                      withLabel
+                    >
+                      <Card border="solid" rounding={3}>
+                        <Section
+                          flexDirection="row"
+                          alignItems="center"
+                          justifyContent="between"
+                          height="fit"
+                          gap={2}
+                        >
+                          <div className="min-w-0 break-all">
+                            <Text font="main-ui-mono" color="text-04" as="span">
+                              {loginUrl}
+                            </Text>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <CopyButton
+                              getCopyText={() => loginUrl}
+                              size="sm"
+                              tooltip={t(
+                                "modals.provider.loginField.copyTooltip"
+                              )}
+                            />
+                            {provider?.enabled && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                prominence="tertiary"
+                                icon={SvgExternalLink}
+                                tooltip={t(
+                                  "modals.provider.loginField.openTooltip"
+                                )}
+                                onClick={() => {
+                                  window.open(
+                                    loginUrl,
+                                    "_blank",
+                                    "noopener,noreferrer"
+                                  );
+                                }}
+                              />
+                            )}
+                          </div>
                         </Section>
                       </Card>
                     </InputVertical>

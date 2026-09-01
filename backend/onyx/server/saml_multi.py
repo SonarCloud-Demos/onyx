@@ -3,6 +3,7 @@ import uuid
 from typing import Any, NoReturn, TypedDict
 
 from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import RedirectResponse
 from fastapi_users.authentication import Strategy
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.xml_utils import OneLogin_Saml2_XML
@@ -35,6 +36,7 @@ from onyx.server.saml import (
 from onyx.utils.logger import setup_logger
 
 logger = setup_logger()
+DEFAULT_SAML_LOGIN_REDIRECT = "/app"
 
 
 def _reject_if_unsupported() -> None:
@@ -252,6 +254,28 @@ def _enforce_allowed_email_domain(provider: SSOProvider, email: str) -> None:
     )
 
 
+def _relay_state_redirect(req: dict[str, Any]) -> str:
+    relay_state = req["post_data"].get("RelayState") or req["get_data"].get(
+        "RelayState"
+    )
+    return _sanitize_relay_state(relay_state) or DEFAULT_SAML_LOGIN_REDIRECT
+
+
+def _redirect_with_login_headers(
+    login_response: Response, destination: str
+) -> Response:
+    redirect_response = RedirectResponse(destination, status_code=302)
+    for header_name, header_value in login_response.headers.items():
+        header_name_lower = header_name.lower()
+        if header_name_lower == "set-cookie":
+            redirect_response.headers.append(header_name, header_value)
+            continue
+        if header_name_lower in {"location", "content-length"}:
+            continue
+        redirect_response.headers[header_name] = header_value
+    return redirect_response
+
+
 @router.get("/authorize")
 async def saml_login(
     request: Request,
@@ -356,7 +380,7 @@ async def _process_saml_callback(
     )
     response = await auth_backend.login(strategy, user)
     await user_manager.on_after_login(user, request, response)
-    return response
+    return _redirect_with_login_headers(response, _relay_state_redirect(req))
 
 
 @router.post("/logout")

@@ -31,10 +31,18 @@ export const SSO_PROVIDER_DETAILS: Record<SSOProviderType, SSOProviderDetail> =
 
 // Provider types the create modal offers, in dropdown order.
 export const CREATABLE_SSO_PROVIDER_TYPES: SSOProviderType[] = [
+  "SAML",
   "GOOGLE_OAUTH",
   "OIDC",
-  "SAML",
 ];
+
+export const MOCK_SAML_METADATA_URL = "https://mocksaml.com/api/saml/metadata";
+export const MOCK_SAML_DEFAULT_CONFIG = {
+  idp_entity_id: "https://saml.example.com/entityid",
+  idp_sso_url: "https://mocksaml.com/api/saml/sso",
+  sp_entity_id: "onyx-mocksaml",
+  email_attribute: "email",
+} satisfies Record<string, string>;
 
 export type SSOConfigFieldKind =
   | "text"
@@ -124,14 +132,14 @@ export const CONFIG_FIELDS_BY_TYPE: Record<SSOProviderType, SSOConfigField[]> =
         label: "IdP Entity ID",
         kind: "text",
         description: "The identity provider's entity ID (issuer).",
-        placeholder: "https://idp.example.com/entity",
+        placeholder: MOCK_SAML_DEFAULT_CONFIG.idp_entity_id,
       },
       {
         name: "idp_sso_url",
         label: "IdP SSO URL",
         kind: "text",
         description: "The IdP endpoint that receives sign-in requests.",
-        placeholder: "https://idp.example.com/sso",
+        placeholder: MOCK_SAML_DEFAULT_CONFIG.idp_sso_url,
       },
       {
         name: "idp_x509_cert",
@@ -146,7 +154,7 @@ export const CONFIG_FIELDS_BY_TYPE: Record<SSOProviderType, SSOConfigField[]> =
         label: "SP Entity ID",
         kind: "text",
         description: "This instance's entity ID, registered with the IdP.",
-        placeholder: "onyx",
+        placeholder: MOCK_SAML_DEFAULT_CONFIG.sp_entity_id,
       },
       {
         name: "sp_x509_cert",
